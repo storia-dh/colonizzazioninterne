@@ -120,7 +120,7 @@
         </filter>
       </defs>
 
-      <!-- Group Area (Sardinia Kingdom Box) -->
+      <!-- Group Areas (Kingdom Boxes) -->
       <g id="group-boxes"></g>
 
       <!-- Connection Lines Group -->
@@ -143,7 +143,7 @@
           </div>
         </div>
         <p class="text-xs text-slate-400 leading-relaxed mt-1">
-          Mappa interattiva delle trattative promosse dai Maniotti a partire dalla Corsica con le varie potenze del Mediterraneo.
+          Mappa interattiva delle trattative promosse dai Maniotti a partire dalla Corsica con le potenze del Mediterraneo e d'Europa.
         </p>
       </div>
     </header>
@@ -174,7 +174,7 @@
         </div>
         <div class="flex items-center gap-2.5">
           <span class="w-3.5 h-2.5 border border-dashed border-sky-400/80 bg-sky-500/10 rounded inline-block"></span>
-          <span class="text-slate-300">Regno di Sardegna (Torino/Cagliari)</span>
+          <span class="text-slate-300">Regno di Sardegna / Regno Unito</span>
         </div>
         <div class="flex items-center gap-2.5">
           <span class="w-8 h-0.5 bg-sky-400/60 inline-block"></span>
@@ -250,8 +250,8 @@
         name: 'TORINO',
         subtitle: 'Capitale Sabauda',
         isCenter: false,
-        x: 100,
-        y: -230,
+        x: 180,
+        y: -210,
         group: 'sardegna_kingdom',
         type: 'kingdom',
         description: 'Capitale del Regno di Sardegna (Stati di Terraferma) e vertice decisionale delle politiche sabaude di ripopolamento.'
@@ -261,39 +261,51 @@
         name: 'CAGLIARI',
         subtitle: 'Capoluogo Sardo',
         isCenter: false,
-        x: 100,
-        y: 230,
+        x: 180,
+        y: 210,
         group: 'sardegna_kingdom',
         type: 'kingdom',
         description: 'Capoluogo dell\'isola di Sardegna sotto sovranità sabauda, destinazione di progetti colonizzatori e insediamenti.'
+      },
+      {
+        id: 'londra',
+        name: 'LONDRA',
+        subtitle: 'Capitale Britannica',
+        isCenter: false,
+        x: -220,
+        y: -210,
+        group: 'uk_kingdom',
+        type: 'kingdom',
+        description: 'Centro politico e decisionale della Corona britannica, da cui dipendono le strategie imperiali, commerciali e navali.'
+      },
+      {
+        id: 'minorca',
+        name: 'MINORCA',
+        subtitle: 'Base Navale Britannica',
+        isCenter: false,
+        x: -220,
+        y: 210,
+        group: 'uk_kingdom',
+        type: 'fortress',
+        description: 'Isola e base strategica sotto amministrazione britannica (Mahón), punto di approdo e canale di trattativa.'
       },
       {
         id: 'spagna',
         name: 'SPAGNA',
         subtitle: 'Corona di Spagna',
         isCenter: false,
-        x: -300,
-        y: -120,
+        x: -420,
+        y: 0,
         type: 'kingdom',
         description: 'Interlocutore monarchico iberico con cui vennero aperte trattative e avanzate patenti per lo stanziamento (es. Almería).'
-      },
-      {
-        id: 'minorca',
-        name: 'MINORCA BRITANNICA',
-        subtitle: 'Dominio Britannico',
-        isCenter: false,
-        x: -260,
-        y: 120,
-        type: 'fortress',
-        description: 'Isola sotto amministrazione britannica (Mahón), punto di approdo e canale di trattativa per la colonia greca.'
       },
       {
         id: 'firenze_livorno',
         name: 'FIRENZE-LIVORNO',
         subtitle: 'Granducato di Toscana',
         isCenter: false,
-        x: 300,
-        y: -60,
+        x: 360,
+        y: 0,
         type: 'republic',
         description: 'Asse toscano con cui i Maniotti stipularono storici capitoli di stanziamento mercantile e marittimo (es. Val di Perga).'
       }
@@ -310,9 +322,23 @@
       {
         source: 'ajaccio',
         target: 'cagliari',
-        label: 'Progetti di Colonizzazione Sarda',
+        label: 'Progetti Colonizzazione Sarda',
         type: 'primary',
-        details: 'Relazione con l\'amministrazione insulare del Regno di Sardegna per l\'insediamento di famiglie coloniche.'
+        details: 'Relazione con l\'amministrazione insulare del Regno di Sardegna per l\'insediamento colonico.'
+      },
+      {
+        source: 'ajaccio',
+        target: 'londra',
+        label: 'Diplomazia Britannica',
+        type: 'diplomatic',
+        details: 'Contatti e trattati diplomatici diretti con il governo di Londra per la protezione e la navigazione.'
+      },
+      {
+        source: 'ajaccio',
+        target: 'minorca',
+        label: 'Presidio Navale Minorchino',
+        type: 'diplomatic',
+        details: 'Accordi operativi e di scalo con la base britannica di Minorca nel Mediterraneo.'
       },
       {
         source: 'ajaccio',
@@ -320,13 +346,6 @@
         label: 'Capitoli di Stanziamento',
         type: 'trade',
         details: 'Intese e accordi commerciali e residenziali con il Granducato di Toscana.'
-      },
-      {
-        source: 'ajaccio',
-        target: 'minorca',
-        label: 'Canale Britannico',
-        type: 'diplomatic',
-        details: 'Contatti con le autorità britanniche di Minorca per protezioni e rotte migratorie.'
       },
       {
         source: 'ajaccio',
@@ -386,42 +405,48 @@
       updateTransform();
     }
 
+    // Helper to render group boxes specifically around designated nodes
+    function renderGroupBox(nodeA, nodeB, title) {
+      const boxX = Math.min(nodeA.x, nodeB.x) - 70;
+      const boxY = Math.min(nodeA.y, nodeB.y) - 60;
+      const boxW = 140;
+      const boxH = Math.abs(nodeB.y - nodeA.y) + 120;
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', boxX);
+      rect.setAttribute('y', boxY);
+      rect.setAttribute('width', boxW);
+      rect.setAttribute('height', boxH);
+      rect.setAttribute('rx', '20');
+      rect.setAttribute('class', 'fill-sky-500/5 stroke-sky-400/40 stroke-dashed');
+      rect.setAttribute('stroke-dasharray', '6 6');
+      rect.setAttribute('stroke-width', '1.5');
+
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', boxX + boxW / 2);
+      label.setAttribute('y', boxY + 22);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('class', 'text-[11px] font-bold fill-sky-400 tracking-wider uppercase');
+      label.textContent = title;
+
+      groupBoxes.appendChild(rect);
+      groupBoxes.appendChild(label);
+    }
+
     // --- Render Network Components ---
     function renderNetwork() {
       groupBoxes.innerHTML = '';
       linesGroup.innerHTML = '';
       nodesGroup.innerHTML = '';
 
-      // 1. Render Visual Container for "Regno di Sardegna" (Torino + Cagliari)
+      // 1. Render Group Boxes
       const torino = nodes.find(n => n.id === 'torino');
       const cagliari = nodes.find(n => n.id === 'cagliari');
-      
-      if (torino && cagliari) {
-        const boxX = Math.min(torino.x, cagliari.x) - 75;
-        const boxY = torino.y - 65;
-        const boxW = 150;
-        const boxH = (cagliari.y - torino.y) + 130;
+      if (torino && cagliari) renderGroupBox(torino, cagliari, 'REGNO DI SARDEGNA');
 
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', boxX);
-        rect.setAttribute('y', boxY);
-        rect.setAttribute('width', boxW);
-        rect.setAttribute('height', boxH);
-        rect.setAttribute('rx', '20');
-        rect.setAttribute('class', 'fill-sky-500/5 stroke-sky-400/40 stroke-dashed text-sky-300');
-        rect.setAttribute('stroke-dasharray', '6 6');
-        rect.setAttribute('stroke-width', '1.5');
-
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', boxX + boxW / 2);
-        label.setAttribute('y', boxY + 22);
-        label.setAttribute('text-anchor', 'middle');
-        label.setAttribute('class', 'text-[11px] font-bold fill-sky-400 tracking-wider uppercase');
-        label.textContent = 'REGNO DI SARDEGNA';
-
-        groupBoxes.appendChild(rect);
-        groupBoxes.appendChild(label);
-      }
+      const londra = nodes.find(n => n.id === 'londra');
+      const minorca = nodes.find(n => n.id === 'minorca');
+      if (londra && minorca) renderGroupBox(londra, minorca, 'REGNO UNITO');
 
       // 2. Render Connections
       connections.forEach(conn => {
@@ -494,7 +519,6 @@
         const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         
         let labelY = node.isCenter ? 48 : 38;
-        if (node.id === 'torino') labelY = 38;
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('y', labelY);

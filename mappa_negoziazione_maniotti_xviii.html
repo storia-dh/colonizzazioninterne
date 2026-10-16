@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rete Diplomatica di Ajaccio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              900: '#0c4a6e',
+            },
+            ajaccio: {
+              glow: '#f59e0b',
+              accent: '#d97706',
+              bg: '#b45309'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+    
+    /* Background Grid Pattern */
+    .bg-grid-pattern-dark {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .bg-grid-pattern-light {
+      background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* Pulse animation for Ajaccio */
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.95);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1.35);
+        opacity: 0.2;
+      }
+      100% {
+        transform: scale(0.95);
+        opacity: 0.8;
+      }
+    }
+
+    .pulse-ring-effect {
+      animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Animated dash lines for connections */
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -40;
+      }
+    }
+    .active-path {
+      stroke-dasharray: 8, 8;
+      animation: dash 1.5s linear infinite;
+    }
+
+    /* Glassmorphism panel */
+    .glass-panel {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 transition-colors duration-300 overflow-hidden h-screen w-screen relative select-none">
+
+  <!-- Canvas Container for SVG Network -->
+  <div id="app-container" class="w-full h-full relative cursor-grab active:cursor-grabbing bg-grid-pattern-dark transition-colors duration-300">
+    
+    <!-- SVG Vector Layer -->
+    <svg id="network-svg" class="w-full h-full absolute inset-0 z-0">
+      <defs>
+        <!-- Glow filter for Ajaccio & highlighted nodes -->
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="glow-gold" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="8" result="blur" />
+          <feComponentTransfer in="blur" result="boost">
+            <feFuncA type="linear" slope="1.5"/>
+          </feComponentTransfer>
+          <feMerge>
+            <feMergeNode in="boost" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        <!-- Gradient for connection lines -->
+        <linearGradient id="grad-ajaccio" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.5"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Connection Lines Group -->
+      <g id="lines-group"></g>
+
+      <!-- Nodes Group -->
+      <g id="nodes-group"></g>
+    </svg>
+
+    <!-- Top Overlay Header -->
+    <header class="absolute top-6 left-6 z-10 pointer-events-none">
+      <div class="glass-panel bg-slate-900/80 dark:bg-slate-900/80 border border-slate-700/50 dark:border-slate-800 p-4 rounded-2xl shadow-2xl pointer-events-auto max-w-sm">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <i data-lucide="compass" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold tracking-tight text-slate-100">Network Diplomatico</h1>
+            <p class="text-xs text-amber-400/90 font-medium uppercase tracking-wider">Centro Strategico: Ajaccio</p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mt-1">
+          Mappa interattiva delle negoziazioni e dei vettori d'influenza tra Ajaccio e le potenze del Mediterraneo.
+        </p>
+      </div>
+    </header>
+
+    <!-- Top Right Controls -->
+    <div class="absolute top-6 right-6 z-10 flex items-center gap-2">
+      <button id="reset-view-btn" class="glass-panel bg-slate-900/80 hover:bg-slate-800 text-slate-300 p-3 rounded-xl border border-slate-700/50 transition-all shadow-lg flex items-center gap-2 text-xs font-medium" title="Ripristina Vista">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">Centra</span>
+      </button>
+      <button id="theme-toggle" class="glass-panel bg-slate-900/80 hover:bg-slate-800 text-slate-300 p-3 rounded-xl border border-slate-700/50 transition-all shadow-lg" title="Cambia Tema">
+        <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+        <i data-lucide="moon" class="w-4 h-4 block dark:hidden text-slate-700"></i>
+      </button>
+    </div>
+
+    <!-- Bottom Left Legend -->
+    <div class="absolute bottom-6 left-6 z-10 glass-panel bg-slate-900/80 dark:bg-slate-900/80 border border-slate-700/50 p-4 rounded-2xl shadow-2xl max-w-xs hidden md:block">
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Legenda Nodo</h3>
+      <div class="space-y-2 text-xs">
+        <div class="flex items-center gap-2.5">
+          <span class="w-3.5 h-3.5 rounded-full bg-amber-500 ring-4 ring-amber-500/20 inline-block"></span>
+          <span class="text-slate-200 font-medium">Ajaccio (Hub Principale)</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="w-3 h-3 rounded-full bg-sky-500 inline-block"></span>
+          <span class="text-slate-300">Regni & Domini Negoziali</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-0.5 bg-sky-400/60 inline-block"></span>
+          <span class="text-slate-400">Direttrici di Trattativa</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zoom Controls -->
+    <div class="absolute bottom-6 right-6 z-10 flex flex-col gap-2">
+      <button id="zoom-in" class="glass-panel bg-slate-900/80 hover:bg-slate-800 text-slate-200 p-3 rounded-xl border border-slate-700/50 transition-all shadow-lg">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+      </button>
+      <button id="zoom-out" class="glass-panel bg-slate-900/80 hover:bg-slate-800 text-slate-200 p-3 rounded-xl border border-slate-700/50 transition-all shadow-lg">
+        <i data-lucide="minus" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Detail Drawer / Modal Side Panel -->
+    <aside id="detail-drawer" class="fixed top-0 right-0 h-full w-full sm:w-96 glass-panel bg-slate-900/95 border-l border-slate-800 z-30 transform translate-x-full transition-transform duration-300 ease-out p-6 overflow-y-auto flex flex-col justify-between shadow-2xl">
+      <div>
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+          <div class="flex items-center gap-2">
+            <span id="drawer-badge" class="px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              Nodo Selezionato
+            </span>
+          </div>
+          <button id="close-drawer" class="p-2 text-slate-400 hover:text-slate-100 rounded-lg hover:bg-slate-800/60 transition-colors">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div id="drawer-content">
+          <h2 id="node-title" class="text-2xl font-bold text-slate-100 mb-1">Ajaccio</h2>
+          <p id="node-subtitle" class="text-xs font-medium text-amber-400 mb-4 uppercase tracking-wider">Capitale e Centro delle Negoziazioni</p>
+          
+          <div class="p-4 rounded-xl bg-slate-800/40 border border-slate-700/40 mb-6">
+            <p id="node-description" class="text-sm text-slate-300 leading-relaxed">
+              Seleziona un nodo sulla mappa per esplorare le relazioni e i trattati diplomatici.
+            </p>
+          </div>
+
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Connessioni Strategiche</h3>
+          <div id="node-routes" class="space-y-3">
+            <!-- Dynamically filled -->
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-6 border-t border-slate-800 text-center">
+        <p class="text-xs text-slate-500">Mappa Vettoriale delle Relazioni Storiche</p>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Application Logic Script -->
+  <script>
+    // --- Data Model ---
+    const nodes = [
+      {
+        id: 'ajaccio',
+        name: 'AJACCIO',
+        subtitle: '★ Centro Nevralgico Principale',
+        isCenter: true,
+        x: 0, 
+        y: 0,
+        type: 'hub',
+        description: 'Punto focale assoluto ed emettitore di tutte le direttive diplomatiche, trattative d\'alleanza e accordi commerciali nel Mediterraneo Occidentale.'
+      },
+      {
+        id: 'torino',
+        name: 'TORINO',
+        subtitle: 'Savoia / Governo del Piemonte',
+        isCenter: false,
+        x: 0,
+        y: -220,
+        type: 'kingdom',
+        description: 'Capitale sabauda e vertice politico da cui promanano le supreme direttive di stato e le strategie d\'area.'
+      },
+      {
+        id: 'spagna',
+        name: 'SPAGNA',
+        subtitle: 'Regno di Spagna',
+        isCenter: false,
+        x: -300,
+        y: -120,
+        type: 'kingdom',
+        description: 'Grande potenza iberica in costante dialogo diplomatico diretto con Ajaccio per gli equilibri del Mediterraneo occidentale.'
+      },
+      {
+        id: 'minorca',
+        name: 'MINORCA BRITANNICA',
+        subtitle: 'Avamposto Navale Strategico',
+        isCenter: false,
+        x: -260,
+        y: 120,
+        type: 'fortress',
+        description: 'Isola sotto controllo britannico, partner diretto per trattative navali, sicurezza delle rotte e neutralità marittima.'
+      },
+      {
+        id: 'toscana',
+        name: 'TOSCANA',
+        subtitle: 'Granducato di Toscana',
+        isCenter: false,
+        x: 260,
+        y: -60,
+        type: 'republic',
+        description: 'Asse commerciale e porto mercantile d\'elezione per lo scambio continuo di merci, cultura e intese marittime.'
+      },
+      {
+        id: 'cagliari',
+        name: 'CAGLIARI',
+        subtitle: 'Sardegna Sabauda',
+        isCenter: false,
+        x: 0,
+        y: 220,
+        type: 'kingdom',
+        description: 'Presidio meridionale e capitale sarda sotto la corona sabauda, fondamentale per la difesa costiera e la continuità territoriale.'
+      }
+    ];
+
+    const connections = [
+      {
+        source: 'ajaccio',
+        target: 'torino',
+        label: 'Direttive di Governo Sabaudo',
+        type: 'primary',
+        details: 'Canale d\'autorità istituzionale e sovranità politica con la capitale piemontese.'
+      },
+      {
+        source: 'ajaccio',
+        target: 'toscana',
+        label: 'Asse Mercantile e Culturale',
+        type: 'trade',
+        details: 'Flussi commerciali continui e intese di navigazione con il Granducato sul Tirreno.'
+      },
+      {
+        source: 'ajaccio',
+        target: 'cagliari',
+        label: 'Controllo Territoriale Sabaudo',
+        type: 'primary',
+        details: 'Coordinamento difensivo, risposte marittime e continuità d\'area tra le due isole.'
+      },
+      {
+        source: 'ajaccio',
+        target: 'minorca',
+        label: 'Negoziazione Navale Diretta',
+        type: 'diplomatic',
+        details: 'Trattative d\'approdo, sicurezza delle rotte ed accordi di neutralità con gli inglesi.'
+      },
+      {
+        source: 'ajaccio',
+        target: 'spagna',
+        label: 'Trattato Diplomatico Diretto',
+        type: 'diplomatic',
+        details: 'Relazione diplomatica diretta tra il centro di Ajaccio e la corona iberica.'
+      }
+    ];
+
+    // Details for each specific route when selecting nodes
+    const routeDetails = {
+      'ajaccio-torino': 'Asse strategico diretto con la capitale sabauda per le decisioni di stato.',
+      'ajaccio-minorca': 'Accordi diretti di sicurezza marittima con la flotta britannica a Minorca.',
+      'ajaccio-spagna': 'Canale di trattativa aperto direttamente con la Corte e i porti della Spagna.',
+      'ajaccio-toscana': 'Scambi commerciali e legami diplomatici d\'area tirrenica.',
+      'ajaccio-cagliari': 'Gestione ed intesa amministrativo-militare dei domini insulari sabaudi.'
+    };
+
+    // --- State Management ---
+    let zoomLevel = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let activeNodeId = null;
+
+    // Elements
+    const svg = document.getElementById('network-svg');
+    const linesGroup = document.getElementById('lines-group');
+    const nodesGroup = document.getElementById('nodes-group');
+    const container = document.getElementById('app-container');
+    const drawer = document.getElementById('detail-drawer');
+    const closeDrawerBtn = document.getElementById('close-drawer');
+
+    // --- Initialization ---
+    function init() {
+      lucide.createIcons();
+      setupLayout();
+      renderNetwork();
+      setupEventListeners();
+      centerMap();
+    }
+
+    // Set SVG ViewBox centered at 0,0
+    function setupLayout() {
+      updateTransform();
+    }
+
+    function updateTransform() {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      const minX = -w / 2 / zoomLevel - panX;
+      const minY = -h / 2 / zoomLevel - panY;
+      const width = w / zoomLevel;
+      const height = h / zoomLevel;
+      
+      svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
+    }
+
+    // Centering function
+    function centerMap() {
+      zoomLevel = 1;
+      panX = 0;
+      panY = 0;
+      updateTransform();
+    }
+
+    // --- Render Network Components ---
+    function renderNetwork() {
+      linesGroup.innerHTML = '';
+      nodesGroup.innerHTML = '';
+
+      // Render Connections
+      connections.forEach(conn => {
+        const sourceNode = nodes.find(n => n.id === conn.source);
+        const targetNode = nodes.find(n => n.id === conn.target);
+
+        if (!sourceNode || !targetNode) return;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const id = `link-${conn.source}-${conn.target}`;
+        
+        // Curve calculation for aesthetic vector styling
+        const dx = targetNode.x - sourceNode.x;
+        const dy = targetNode.y - sourceNode.y;
+        const dr = Math.sqrt(dx * dx + dy * dy) * 1.2; // Slight arc curve
+
+        // Generate Path string
+        let d = `M${sourceNode.x},${sourceNode.y} `;
+        if (conn.source === 'ajaccio' || conn.target === 'ajaccio') {
+          // Straight or slightly curved lines from center
+          d += `L${targetNode.x},${targetNode.y}`;
+        } else {
+          // Curved connector line for secondary connections
+          d += `A${dr},${dr} 0 0,1 ${targetNode.x},${targetNode.y}`;
+        }
+
+        path.setAttribute('d', d);
+        path.setAttribute('id', id);
+        path.setAttribute('class', 'transition-all duration-300 stroke-slate-600/60 dark:stroke-slate-500/40');
+        path.setAttribute('stroke-width', conn.type === 'primary' ? '3' : '2');
+        path.setAttribute('fill', 'none');
+
+        // Append line glow backdrop
+        const bgPath = path.cloneNode(true);
+        bgPath.setAttribute('id', `${id}-bg`);
+        bgPath.setAttribute('class', 'stroke-transparent transition-all duration-300');
+        bgPath.setAttribute('stroke-width', '12');
+
+        linesGroup.appendChild(bgPath);
+        linesGroup.appendChild(path);
+      });
+
+      // Render Nodes
+      nodes.forEach(node => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+        g.setAttribute('class', 'cursor-pointer group');
+        g.setAttribute('data-id', node.id);
+
+        if (node.isCenter) {
+          // Animated aura ring for Ajaccio
+          const auraRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          auraRing.setAttribute('r', '38');
+          auraRing.setAttribute('class', 'fill-amber-500/20 stroke-amber-500/40 pulse-ring-effect');
+          g.appendChild(auraRing);
+
+          // Glowing Outer ring
+          const outerRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          outerRing.setAttribute('r', '28');
+          outerRing.setAttribute('class', 'fill-amber-500/20 stroke-amber-500/80 stroke-2');
+          outerRing.setAttribute('filter', 'url(#glow-gold)');
+          g.appendChild(outerRing);
+
+          // Inner Circle
+          const innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          innerCircle.setAttribute('r', '18');
+          innerCircle.setAttribute('class', 'fill-amber-500 stroke-slate-950 stroke-2 shadow-2xl');
+          g.appendChild(innerCircle);
+
+          // Star Icon for Ajaccio
+          const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          iconPath.setAttribute('d', 'M0 -7 L2 -2 L7 -2 L3 1 L5 6 L0 3 L-5 6 L-3 1 L-7 -2 L-2 -2 Z');
+          iconPath.setAttribute('class', 'fill-slate-950');
+          g.appendChild(iconPath);
+
+        } else {
+          // Standard Node background halo
+          const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          halo.setAttribute('r', '22');
+          halo.setAttribute('class', 'fill-slate-900/80 stroke-sky-500/40 group-hover:stroke-sky-400 group-hover:fill-sky-500/20 transition-all duration-300');
+          g.appendChild(halo);
+
+          // Node Core
+          const core = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          core.setAttribute('r', '10');
+          core.setAttribute('class', 'fill-sky-500 group-hover:fill-sky-400 transition-all duration-300');
+          g.appendChild(core);
+        }
+
+        // SVG Label Element
+        const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        
+        // Determine label position based on node
+        let labelY = node.isCenter ? 48 : 38;
+        if (node.id === 'torino') labelY = -32;
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('y', labelY);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('class', node.isCenter 
+          ? 'font-bold text-sm fill-amber-400 tracking-wide drop-shadow-md' 
+          : 'font-semibold text-xs fill-slate-200 group-hover:fill-sky-300 transition-colors duration-200');
+        text.textContent = node.name;
+
+        // Subtitle label
+        const subtext = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        subtext.setAttribute('y', labelY + 14);
+        subtext.setAttribute('text-anchor', 'middle');
+        subtext.setAttribute('class', 'text-[10px] fill-slate-400 font-medium');
+        subtext.textContent = node.subtitle.replace('★ ', '');
+
+        textGroup.appendChild(text);
+        textGroup.appendChild(subtext);
+        g.appendChild(textGroup);
+
+        // Events
+        g.addEventListener('mouseenter', () => highlightNode(node.id));
+        g.addEventListener('mouseleave', () => clearHighlights());
+        g.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectNode(node);
+        });
+
+        nodesGroup.appendChild(g);
+      });
+    }
+
+    // --- Highlighting Logic ---
+    function highlightNode(nodeId) {
+      // Highlight lines connected to this node
+      connections.forEach(conn => {
+        const lineId = `link-${conn.source}-${conn.target}`;
+        const line = document.getElementById(lineId);
+
+        if (conn.source === nodeId || conn.target === nodeId) {
+          if (line) {
+            line.setAttribute('class', 'stroke-amber-400 active-path transition-all duration-300');
+            line.setAttribute('stroke-width', '3.5');
+            line.setAttribute('filter', 'url(#glow)');
+          }
+        } else {
+          if (line) {
+            line.setAttribute('class', 'stroke-slate-800/20 dark:stroke-slate-800/20 transition-all duration-300');
+            line.setAttribute('stroke-width', '1');
+          }
+        }
+      });
+    }
+
+    function clearHighlights() {
+      if (activeNodeId) {
+        highlightNode(activeNodeId);
+        return;
+      }
+
+      connections.forEach(conn => {
+        const lineId = `link-${conn.source}-${conn.target}`;
+        const line = document.getElementById(lineId);
+        if (line) {
+          line.setAttribute('class', 'transition-all duration-300 stroke-slate-600/60 dark:stroke-slate-500/40');
+          line.setAttribute('stroke-width', conn.type === 'primary' ? '3' : '2');
+          line.removeAttribute('filter');
+        }
+      });
+    }
+
+    // --- Drawer / Node Selection Logic ---
+    function selectNode(node) {
+      activeNodeId = node.id;
+      highlightNode(node.id);
+
+      // Populate Drawer
+      document.getElementById('node-title').textContent = node.name;
+      document.getElementById('node-subtitle').textContent = node.subtitle;
+      document.getElementById('node-description').textContent = node.description;
+
+      const badge = document.getElementById('drawer-badge');
+      if (node.isCenter) {
+        badge.textContent = 'Hub Centrale';
+        badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30';
+      } else {
+        badge.textContent = 'Nodo Diplomatico';
+        badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-sky-500/20 text-sky-400 border border-sky-500/30';
+      }
+
+      // Populate Connected Routes List
+      const routesContainer = document.getElementById('node-routes');
+      routesContainer.innerHTML = '';
+
+      const relevantConnections = connections.filter(c => c.source === node.id || c.target === node.id);
+
+      if (relevantConnections.length === 0) {
+        routesContainer.innerHTML = '<p class="text-xs text-slate-500 italic">Nessuna rotta diretta registrata.</p>';
+      } else {
+        relevantConnections.forEach(conn => {
+          const otherId = conn.source === node.id ? conn.target : conn.source;
+          const otherNode = nodes.find(n => n.id === otherId);
+
+          const routeEl = document.createElement('div');
+          routeEl.className = 'p-3 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:border-amber-500/50 transition-all cursor-pointer';
+          routeEl.innerHTML = `
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-100">${node.name} ↔ ${otherNode.name}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-amber-300 font-mono">${conn.label}</span>
+            </div>
+            <p class="text-xs text-slate-400 leading-normal">${conn.details}</p>
+          `;
+
+          routeEl.addEventListener('click', () => selectNode(otherNode));
+          routesContainer.appendChild(routeEl);
+        });
+      }
+
+      // Open Drawer
+      drawer.classList.remove('translate-x-full');
+    }
+
+    function closeDrawer() {
+      drawer.classList.add('translate-x-full');
+      activeNodeId = null;
+      clearHighlights();
+    }
+
+    // --- Event Listeners & Interactions ---
+    function setupEventListeners() {
+      // Pan & Drag
+      container.addEventListener('mousedown', (e) => {
+        if (e.target.closest('#detail-drawer') || e.target.closest('button') || e.target.closest('header')) return;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = (e.clientX - startX) / zoomLevel;
+        const dy = (e.clientY - startY) / zoomLevel;
+
+        panX += dx;
+        panY += dy;
+
+        startX = e.clientX;
+        startY = e.clientY;
+
+        updateTransform();
+      });
+
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      // Mouse Wheel Zoom
+      container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+        const newZoom = zoomLevel * zoomFactor;
+
+        if (newZoom >= 0.5 && newZoom <= 3.0) {
+          zoomLevel = newZoom;
+          updateTransform();
+        }
+      }, { passive: false });
+
+      // Touch Pinch Zoom & Pan Support
+      let touchStartX = 0, touchStartY = 0;
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }
+      });
+
+      container.addEventListener('touchmove', (e) => {
+        if (isDragging && e.touches.length === 1) {
+          const dx = (e.touches[0].clientX - touchStartX) / zoomLevel;
+          const dy = (e.touches[0].clientY - touchStartY) / zoomLevel;
+          panX += dx;
+          panY += dy;
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          updateTransform();
+        }
+      });
+
+      container.addEventListener('touchend', () => { isDragging = false; });
+
+      // Control Buttons
+      document.getElementById('zoom-in').addEventListener('click', () => {
+        if (zoomLevel < 3.0) { zoomLevel *= 1.25; updateTransform(); }
+      });
+
+      document.getElementById('zoom-out').addEventListener('click', () => {
+        if (zoomLevel > 0.5) { zoomLevel /= 1.25; updateTransform(); }
+      });
+
+      document.getElementById('reset-view-btn').addEventListener('click', centerMap);
+      closeDrawerBtn.addEventListener('click', closeDrawer);
+
+      // Deselect on clicking empty background
+      svg.addEventListener('click', (e) => {
+        if (e.target.tagName === 'svg') {
+          closeDrawer();
+        }
+      });
+
+      // Window Resize Handler
+      window.addEventListener('resize', () => {
+        updateTransform();
+      });
+
+      // Theme Toggle Logic
+      const themeToggleBtn = document.getElementById('theme-toggle');
+      themeToggleBtn.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        container.className = isDark 
+          ? 'w-full h-full relative cursor-grab active:cursor-grabbing bg-grid-pattern-dark transition-colors duration-300' 
+          : 'w-full h-full relative cursor-grab active:cursor-grabbing bg-slate-100 bg-grid-pattern-light transition-colors duration-300';
+      });
+    }
+
+    // Run Initialization
+    window.onload = init;
+  </script>
+</body>
+</html>

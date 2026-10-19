@@ -393,13 +393,13 @@
       {
         id: 'cagliari',
         name: 'CAGLIARI',
-        subtitle: 'Capoluogo Sardo',
+        subtitle: 'Capitale del Regno di Sardegna',
         isCenter: false,
         x: 180,
         y: 210,
         group: 'sardegna_kingdom',
         type: 'kingdom',
-        description: 'Capoluogo dell\'isola di Sardegna sotto sovranità sabauda, destinazione di progetti colonizzatori e insediamenti.'
+        description: 'Capitale del regno di Sardegna sotto sovranità sabauda.'
       },
       {
         id: 'londra',
@@ -427,12 +427,12 @@
         // NUOVO NODO: modifica qui posizione e testi relativi alla Francia.
         id: 'francia',
         name: 'FRANCIA',
-        subtitle: 'Scheda da completare',
+        subtitle: 'Dal 1769 acquista il controllo della Corsica',
         isCenter: false,
         x: 0,
         y: -320,
         type: 'kingdom',
-        description: 'Nodo Francia aggiunto alla rete. Inserire qui la descrizione storica e i riferimenti documentari. Nessuna relazione è ancora registrata.'
+        description: 'Dal 1769 acquista il controllo della Corsica.'
       },
       {
         id: 'spagna',
@@ -466,6 +466,15 @@
         label: 'Trattativa Politica Sabauda',
         type: 'primary',
         details: 'Interlocuzione diretta con la corte di Torino per condizioni di vassallaggio e assegnazione terre.'
+      },
+      {
+        // COLLEGAMENTO AJACCIO - FRANCIA
+        // Personalizza label e details con il contenuto documentato.
+        source: 'ajaccio',
+        target: 'francia',
+        label: 'Relazione Ajaccio–Francia',
+        type: 'diplomatic',
+        details: 'Collegamento tra Ajaccio e Francia. Descrizione storica, date e riferimenti documentari da completare.'
       },
       {
         source: 'ajaccio',

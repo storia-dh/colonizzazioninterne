@@ -4,7 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rete negoziale dei Maniotti nel XVIII secolo</title>
-  <!-- Tailwind CSS -->
+  <!-- DIPENDENZE ESTERNE
+       Tailwind gestisce l'aspetto; Lucide le icone; Google Fonts il carattere.
+       Questa versione richiede Internet per caricare queste risorse.
+       Per un uso stabile in produzione, ospita le risorse sul tuo server
+       e fissa le versioni invece di usare il canale latest. -->
+  <!-- Tailwind CSS: classi HTML come p-4, rounded-2xl e text-xs
+       regolano spaziature, arrotondamento e dimensione del testo. -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -44,6 +50,33 @@
       user-select: none;
     }
     
+    /* PERSONALIZZAZIONE GRAFICA
+       Colori principali: CONFIG nel JavaScript.
+       Griglia: trasparenza e background-size qui sotto.
+       Nomi dei nodi: classi text-xs/text-sm nella funzione renderNetwork.
+       Sottotitoli: text-[10px] nella stessa funzione.
+       Pannello laterale: sm:w-96 nel blocco detail-drawer.
+       Effetto luminoso: stdDeviation nei filtri SVG.
+       Le modifiche di colore non cambiano il significato storico dei dati. */
+    html:not(.dark) .node-label-normal { fill: #1e293b; }
+    html:not(.dark) .node-label-hub { fill: #92400e; }
+    html:not(.dark) .node-subtitle { fill: #475569; }
+    .node-core { fill: var(--node-color); }
+    .group:hover .node-core { fill: var(--node-hover-color); }
+    .hub-core { fill: var(--hub-color); }
+    .network-line { stroke: var(--line-light); opacity: .6; }
+    .dark .network-line { stroke: var(--line-dark); opacity: .55; }
+    .network-line-active { stroke: var(--active-color); opacity: 1; }
+    .network-line-muted { stroke: var(--line-light); opacity: .16; }
+    .dark .network-line-muted { stroke: var(--line-dark); }
+    .network-group-box { fill: var(--node-color); fill-opacity: .05;
+                         stroke: var(--node-color); stroke-opacity: .4; }
+
+    /* Accessibilità: rispetta la preferenza di ridurre le animazioni. */
+    @media (prefers-reduced-motion: reduce) {
+      .pulse-ring-effect, .active-path { animation: none !important; }
+    }
+
     /* Background Grid Pattern */
     .bg-grid-pattern-dark {
       background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
@@ -143,7 +176,7 @@
           </div>
         </div>
         <p class="text-xs text-slate-400 leading-relaxed mt-1">
-          Mappa interattiva delle trattative promosse dai Maniotti a partire dalla Corsica con le potenze del Mediterraneo e d'Europa.
+          Mappa delle trattative promosse dai Maniotti di Corsica con cancellerie europee nel XVIII secolo.
         </p>
       </div>
     </header>
@@ -174,11 +207,11 @@
         </div>
         <div class="flex items-center gap-2.5">
           <span class="w-3.5 h-2.5 border border-dashed border-sky-400/80 bg-sky-500/10 rounded inline-block"></span>
-          <span class="text-slate-300">Regno di Sardegna / Regno Unito</span>
+          <span class="text-slate-300">Raggruppamenti politici</span>
         </div>
         <div class="flex items-center gap-2.5">
           <span class="w-8 h-0.5 bg-sky-400/60 inline-block"></span>
-          <span class="text-slate-400">Rotte di Trattativa</span>
+          <span class="text-slate-400">Relazioni registrate</span>
         </div>
       </div>
     </div>
@@ -225,7 +258,7 @@
       </div>
 
       <div class="pt-6 border-t border-slate-800 text-center">
-        <p class="text-xs text-slate-500">Mappa Vettoriale della Diaspora Maniotta</p>
+        <p class="text-xs text-slate-500">Schema delle relazioni: posizioni non geografiche</p>
       </div>
     </aside>
 
@@ -233,6 +266,107 @@
 
   <!-- Application Logic Script -->
   <script>
+    /* =============================================================
+       GUIDA ALLA PERSONALIZZAZIONE
+       =============================================================
+       Questa è una rete SCHEMATICA: x e y non sono longitudine e latitudine.
+       Le linee rappresentano relazioni, non itinerari geografici.
+
+       COME AGGIUNGERE UN NODO
+       1. Nell'array nodes copia un oggetto completo, separandolo dagli
+          altri con una virgola. L'ultimo oggetto può avere la virgola finale.
+       2. Assegna un id univoco, senza spazi, per esempio 'napoli'.
+       3. Compila name (nome visibile), subtitle e description.
+       4. Imposta x e y: x positivo = destra; y positivo = basso.
+          Ajaccio è il riferimento (0, 0). Prova spostamenti di 100-200 unità.
+       5. Usa isCenter: false per i nodi ordinari. Mantieni un solo centro.
+       6. group è facoltativo: deve coincidere con l'id di un gruppo
+          definito nell'array groups. Omettilo per un nodo indipendente.
+       7. type è una classificazione descrittiva: in questa versione
+          non modifica automaticamente forma o colore.
+       8. Salva e ricarica il file HTML; premi Centra per inquadrare la rete.
+
+       ESEMPIO DA COPIARE DENTRO nodes (non attivo):
+       {
+         id: 'napoli',
+         name: 'NAPOLI',
+         subtitle: 'Sottotitolo da compilare',
+         isCenter: false,
+         x: 360,
+         y: 300,
+         type: 'kingdom',
+         description: 'Inserire una descrizione verificata e le fonti.'
+       },
+
+       COME COLLEGARE UN NODO
+       Aggiungi un oggetto nell'array connections. source e target devono
+       essere id esistenti, non i nomi visibili. I collegamenti sono trattati
+       come reciproci nell'interfaccia: non indicano una direzione storica.
+
+       ESEMPIO DA COPIARE DENTRO connections (non attivo):
+       {
+         source: 'ajaccio',
+         target: 'francia',
+         label: 'Titolo della relazione documentata',
+         type: 'diplomatic',
+         details: 'Inserire contenuto, data e fonte della relazione.'
+       },
+
+       primary = tratto più spesso; diplomatic e trade = tratto ordinario.
+       Non duplicare una coppia source/target: il controllo la segnala.
+       Per più episodi sulla stessa coppia, riassumili in details.
+
+       FRANCIA è già presente in nodes. Non ha collegamenti precompilati:
+       manca una relazione fornita dall'utente da descrivere come attestata.
+
+       COME AGGIUNGERE UN GRUPPO
+       In groups aggiungi { id: 'nuovo_gruppo', title: 'TITOLO GRUPPO' }.
+       Assegna group: 'nuovo_gruppo' ai nodi da includere.
+       Il rettangolo viene calcolato automaticamente intorno ai membri.
+
+       TESTI DELL'INTERFACCIA
+       Titolo del browser: tag <title> in head.
+       Titolo e introduzione: blocco header del documento.
+       Legenda: blocco Bottom Left Legend.
+       Testo finale del pannello: fondo di detail-drawer.
+       Mantieni coerenti questi testi con i dati realmente rappresentati.
+       ============================================================= */
+
+    // CONFIGURAZIONE VISIVA: modifica questi valori per tutta la rete.
+    const CONFIG = {
+      nodeColor: '#0ea5e9',       // colore dei nodi ordinari
+      nodeHoverColor: '#38bdf8',  // colore al passaggio del mouse
+      hubColor: '#f59e0b',        // colore del centro focale
+      lineColorDark: '#64748b',   // connessioni nel tema scuro
+      lineColorLight: '#64748b',  // connessioni nel tema chiaro
+      activeColor: '#fbbf24',     // connessioni evidenziate
+      nodeRadius: 10,            // raggio del punto ordinario, in unità SVG
+      haloRadius: 22,            // raggio della cornice del nodo ordinario
+      hubRadius: 18,             // raggio del centro focale
+      nodeLabelY: 38,            // distanza verticale del nome dal nodo
+      hubLabelY: 48,             // distanza verticale del nome dal centro
+      subtitleGap: 14,           // distanza tra nome e sottotitolo
+      lineWidth: 2,              // spessore delle relazioni ordinarie
+      primaryLineWidth: 3,       // spessore delle relazioni primary
+      activeLineWidth: 3.5,      // spessore delle relazioni evidenziate
+      groupPaddingX: 85,         // margine orizzontale dei gruppi
+      groupPaddingY: 65,         // margine verticale dei gruppi
+      minZoom: 0.25,             // limite inferiore dello zoom
+      maxZoom: 3,                // limite superiore dello zoom
+      initialMaxZoom: 1,         // ingrandimento massimo dopo Centra
+      fitMarginX: 100,           // spazio riservato ai lati durante Centra
+      fitMarginY: 90             // spazio riservato sopra e sotto
+    };
+
+    // GRUPPI: id interno e titolo visibile del rettangolo.
+    const groups = [
+      { id: 'sardegna_kingdom', title: 'REGNO DI SARDEGNA' },
+      { id: 'uk_kingdom', title: 'REGNO UNITO' }
+    ];
+
+    // NODI: modifica solo questi dati per aggiungere o spostare un luogo.
+    // id: univoco; name/subtitle: testi; description: scheda laterale.
+    // x/y: posizione schematica; isCenter: centro focale; group: facoltativo.
     // --- Data Model ---
     const nodes = [
       {
@@ -290,6 +424,17 @@
         description: 'Isola e base strategica sotto amministrazione britannica (Mahón), punto di approdo e canale di trattativa.'
       },
       {
+        // NUOVO NODO: modifica qui posizione e testi relativi alla Francia.
+        id: 'francia',
+        name: 'FRANCIA',
+        subtitle: 'Scheda da completare',
+        isCenter: false,
+        x: 0,
+        y: -320,
+        type: 'kingdom',
+        description: 'Nodo Francia aggiunto alla rete. Inserire qui la descrizione storica e i riferimenti documentari. Nessuna relazione è ancora registrata.'
+      },
+      {
         id: 'spagna',
         name: 'SPAGNA',
         subtitle: 'Corona di Spagna',
@@ -311,6 +456,9 @@
       }
     ];
 
+    // CONNESSIONI: source/target fanno riferimento agli id in nodes.
+    // label è il titolo; details è la spiegazione nella scheda laterale.
+    // Le descrizioni originali sono conservate: verificarle sulle fonti.
     const connections = [
       {
         source: 'ajaccio',
@@ -376,11 +524,41 @@
 
     // --- Initialization ---
     function init() {
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
+      validateData();
+      applyVisualConfig();
       setupLayout();
       renderNetwork();
       setupEventListeners();
       centerMap();
+    }
+
+    // CONTROLLO DATI: errori espliciti nella console del browser (F12).
+    function validateData() {
+      const ids = new Set();
+      const pairs = new Set();
+      nodes.forEach(node => {
+        if (!node.id || ids.has(node.id)) throw new Error('ID nodo mancante o duplicato: ' + node.id);
+        if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) throw new Error('Coordinate non numeriche: ' + node.id);
+        if (node.group && !groups.some(group => group.id === node.group)) throw new Error('Gruppo inesistente: ' + node.group);
+        ids.add(node.id);
+      });
+      connections.forEach(conn => {
+        if (!ids.has(conn.source) || !ids.has(conn.target)) throw new Error('Nodo di connessione inesistente: ' + conn.source + ' / ' + conn.target);
+        const key = JSON.stringify([conn.source, conn.target].sort());
+        if (pairs.has(key)) throw new Error('Connessione duplicata: ' + key);
+        pairs.add(key);
+      });
+    }
+
+    function applyVisualConfig() {
+      const root = document.documentElement;
+      root.style.setProperty('--node-color', CONFIG.nodeColor);
+      root.style.setProperty('--node-hover-color', CONFIG.nodeHoverColor);
+      root.style.setProperty('--hub-color', CONFIG.hubColor);
+      root.style.setProperty('--active-color', CONFIG.activeColor);
+      root.style.setProperty('--line-dark', CONFIG.lineColorDark);
+      root.style.setProperty('--line-light', CONFIG.lineColorLight);
     }
 
     function setupLayout() {
@@ -398,39 +576,45 @@
       svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
     }
 
+    // Inquadra automaticamente tutti i nodi, anche dopo nuove aggiunte.
     function centerMap() {
-      zoomLevel = 1;
-      panX = 0;
-      panY = 0;
+      if (!nodes.length) return;
+      const minX = Math.min(...nodes.map(n => n.x)) - 120;
+      const maxX = Math.max(...nodes.map(n => n.x)) + 120;
+      const minY = Math.min(...nodes.map(n => n.y)) - 65;
+      const maxY = Math.max(...nodes.map(n => n.y)) + 85;
+      const availableW = Math.max(100, container.clientWidth - CONFIG.fitMarginX * 2);
+      const availableH = Math.max(100, container.clientHeight - CONFIG.fitMarginY * 2);
+      zoomLevel = Math.max(CONFIG.minZoom, Math.min(CONFIG.initialMaxZoom,
+        availableW / (maxX - minX), availableH / (maxY - minY)));
+      panX = -(minX + maxX) / 2;
+      panY = -(minY + maxY) / 2;
       updateTransform();
     }
 
-    // Helper to render group boxes specifically around designated nodes
-    function renderGroupBox(nodeA, nodeB, title) {
-      const boxX = Math.min(nodeA.x, nodeB.x) - 70;
-      const boxY = Math.min(nodeA.y, nodeB.y) - 60;
-      const boxW = 140;
-      const boxH = Math.abs(nodeB.y - nodeA.y) + 120;
-
+    // Gruppi generici: il riquadro segue tutti i nodi con lo stesso group.
+    function renderGroupBox(members, title) {
+      if (!members.length) return;
+      const boxX = Math.min(...members.map(n => n.x)) - CONFIG.groupPaddingX;
+      const boxY = Math.min(...members.map(n => n.y)) - CONFIG.groupPaddingY;
+      const boxW = Math.max(...members.map(n => n.x)) - boxX + CONFIG.groupPaddingX;
+      const boxH = Math.max(...members.map(n => n.y)) - boxY + CONFIG.groupPaddingY;
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       rect.setAttribute('x', boxX);
       rect.setAttribute('y', boxY);
       rect.setAttribute('width', boxW);
       rect.setAttribute('height', boxH);
-      rect.setAttribute('rx', '20');
-      rect.setAttribute('class', 'fill-sky-500/5 stroke-sky-400/40 stroke-dashed');
-      rect.setAttribute('stroke-dasharray', '6 6');
+      rect.setAttribute('rx', '20'); // arrotondamento degli angoli del gruppo
+      rect.setAttribute('class', 'network-group-box');
+      rect.setAttribute('stroke-dasharray', '6 6'); // tratto e spazio del bordo
       rect.setAttribute('stroke-width', '1.5');
-
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       label.setAttribute('x', boxX + boxW / 2);
       label.setAttribute('y', boxY + 22);
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('class', 'text-[11px] font-bold fill-sky-400 tracking-wider uppercase');
       label.textContent = title;
-
-      groupBoxes.appendChild(rect);
-      groupBoxes.appendChild(label);
+      groupBoxes.append(rect, label);
     }
 
     // --- Render Network Components ---
@@ -439,14 +623,10 @@
       linesGroup.innerHTML = '';
       nodesGroup.innerHTML = '';
 
-      // 1. Render Group Boxes
-      const torino = nodes.find(n => n.id === 'torino');
-      const cagliari = nodes.find(n => n.id === 'cagliari');
-      if (torino && cagliari) renderGroupBox(torino, cagliari, 'REGNO DI SARDEGNA');
-
-      const londra = nodes.find(n => n.id === 'londra');
-      const minorca = nodes.find(n => n.id === 'minorca');
-      if (londra && minorca) renderGroupBox(londra, minorca, 'REGNO UNITO');
+      // I gruppi si aggiornano dai dati, senza aggiungere funzioni speciali.
+      groups.forEach(group => renderGroupBox(
+        nodes.filter(node => node.group === group.id), group.title
+      ));
 
       // 2. Render Connections
       connections.forEach(conn => {
@@ -462,8 +642,8 @@
 
         path.setAttribute('d', d);
         path.setAttribute('id', id);
-        path.setAttribute('class', 'transition-all duration-300 stroke-slate-600/60 dark:stroke-slate-500/40');
-        path.setAttribute('stroke-width', conn.type === 'primary' ? '3' : '2');
+        path.setAttribute('class', 'network-line transition-all duration-300');
+        path.setAttribute('stroke-width', conn.type === 'primary' ? CONFIG.primaryLineWidth : CONFIG.lineWidth);
         path.setAttribute('fill', 'none');
 
         const bgPath = path.cloneNode(true);
@@ -481,6 +661,14 @@
         g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
         g.setAttribute('class', 'cursor-pointer group');
         g.setAttribute('data-id', node.id);
+        g.setAttribute('tabindex', '0');
+        g.setAttribute('role', 'button');
+        g.setAttribute('aria-label', 'Apri scheda ' + node.name);
+        g.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault(); selectNode(node);
+          }
+        });
 
         if (node.isCenter) {
           const auraRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -495,8 +683,8 @@
           g.appendChild(outerRing);
 
           const innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          innerCircle.setAttribute('r', '18');
-          innerCircle.setAttribute('class', 'fill-amber-500 stroke-slate-950 stroke-2 shadow-2xl');
+          innerCircle.setAttribute('r', CONFIG.hubRadius);
+          innerCircle.setAttribute('class', 'hub-core stroke-slate-950 stroke-2 shadow-2xl');
           g.appendChild(innerCircle);
 
           const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -506,32 +694,32 @@
 
         } else {
           const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          halo.setAttribute('r', '22');
+          halo.setAttribute('r', CONFIG.haloRadius);
           halo.setAttribute('class', 'fill-slate-900/80 stroke-sky-500/40 group-hover:stroke-sky-400 group-hover:fill-sky-500/20 transition-all duration-300');
           g.appendChild(halo);
 
           const core = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          core.setAttribute('r', '10');
-          core.setAttribute('class', 'fill-sky-500 group-hover:fill-sky-400 transition-all duration-300');
+          core.setAttribute('r', CONFIG.nodeRadius);
+          core.setAttribute('class', 'node-core transition-all duration-300');
           g.appendChild(core);
         }
 
         const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         
-        let labelY = node.isCenter ? 48 : 38;
+        let labelY = node.isCenter ? CONFIG.hubLabelY : CONFIG.nodeLabelY;
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('y', labelY);
         text.setAttribute('text-anchor', 'middle');
         text.setAttribute('class', node.isCenter 
-          ? 'font-bold text-sm fill-amber-400 tracking-wide drop-shadow-md' 
-          : 'font-semibold text-xs fill-slate-200 group-hover:fill-sky-300 transition-colors duration-200');
+          ? 'node-label-hub font-bold text-sm fill-amber-400 tracking-wide drop-shadow-md' 
+          : 'node-label-normal font-semibold text-xs fill-slate-200 group-hover:fill-sky-300 transition-colors duration-200');
         text.textContent = node.name;
 
         const subtext = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        subtext.setAttribute('y', labelY + 14);
+        subtext.setAttribute('y', labelY + CONFIG.subtitleGap);
         subtext.setAttribute('text-anchor', 'middle');
-        subtext.setAttribute('class', 'text-[10px] fill-slate-400 font-medium');
+        subtext.setAttribute('class', 'node-subtitle text-[10px] fill-slate-400 font-medium');
         subtext.textContent = node.subtitle.replace('★ ', '');
 
         textGroup.appendChild(text);
@@ -557,13 +745,14 @@
 
         if (conn.source === nodeId || conn.target === nodeId) {
           if (line) {
-            line.setAttribute('class', 'stroke-amber-400 active-path transition-all duration-300');
-            line.setAttribute('stroke-width', '3.5');
+            line.setAttribute('class', 'network-line-active active-path transition-all duration-300');
+            line.setAttribute('stroke-width', CONFIG.activeLineWidth);
             line.setAttribute('filter', 'url(#glow)');
           }
         } else {
           if (line) {
-            line.setAttribute('class', 'stroke-slate-800/20 dark:stroke-slate-800/20 transition-all duration-300');
+            line.removeAttribute('filter');
+            line.setAttribute('class', 'network-line-muted transition-all duration-300');
             line.setAttribute('stroke-width', '1');
           }
         }
@@ -580,8 +769,8 @@
         const lineId = `link-${conn.source}-${conn.target}`;
         const line = document.getElementById(lineId);
         if (line) {
-          line.setAttribute('class', 'transition-all duration-300 stroke-slate-600/60 dark:stroke-slate-500/40');
-          line.setAttribute('stroke-width', conn.type === 'primary' ? '3' : '2');
+          line.setAttribute('class', 'network-line transition-all duration-300');
+          line.setAttribute('stroke-width', conn.type === 'primary' ? CONFIG.primaryLineWidth : CONFIG.lineWidth);
           line.removeAttribute('filter');
         }
       });
@@ -611,7 +800,7 @@
       const relevantConnections = connections.filter(c => c.source === node.id || c.target === node.id);
 
       if (relevantConnections.length === 0) {
-        routesContainer.innerHTML = '<p class="text-xs text-slate-500 italic">Nessuna rotta diretta registrata.</p>';
+        routesContainer.innerHTML = '<p class="text-xs text-slate-500 italic">Nessuna relazione diretta registrata.</p>';
       } else {
         relevantConnections.forEach(conn => {
           const otherId = conn.source === node.id ? conn.target : conn.source;
@@ -619,13 +808,16 @@
 
           const routeEl = document.createElement('div');
           routeEl.className = 'p-3 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:border-amber-500/50 transition-all cursor-pointer';
-          routeEl.innerHTML = `
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-bold text-slate-100">${node.name} ↔ ${otherNode.name}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-amber-300 font-mono">${conn.label}</span>
-            </div>
-            <p class="text-xs text-slate-400 leading-normal">${conn.details}</p>
-          `;
+          const heading = document.createElement('div');
+          heading.className = 'text-xs font-bold text-slate-100 mb-1';
+          heading.textContent = node.name + ' ↔ ' + otherNode.name;
+          const title = document.createElement('p');
+          title.className = 'text-xs text-amber-300 mb-1';
+          title.textContent = conn.label;
+          const detail = document.createElement('p');
+          detail.className = 'text-xs text-slate-400 leading-normal';
+          detail.textContent = conn.details;
+          routeEl.append(heading, title, detail);
 
           routeEl.addEventListener('click', () => selectNode(otherNode));
           routesContainer.appendChild(routeEl);
@@ -669,11 +861,12 @@
       });
 
       container.addEventListener('wheel', (e) => {
+        if (e.target.closest('#detail-drawer, button, header')) return;
         e.preventDefault();
         const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
         const newZoom = zoomLevel * zoomFactor;
 
-        if (newZoom >= 0.5 && newZoom <= 3.0) {
+        if (newZoom >= CONFIG.minZoom && newZoom <= CONFIG.maxZoom) {
           zoomLevel = newZoom;
           updateTransform();
         }
@@ -681,6 +874,7 @@
 
       let touchStartX = 0, touchStartY = 0;
       container.addEventListener('touchstart', (e) => {
+        if (e.target.closest('#detail-drawer, button, header')) return;
         if (e.touches.length === 1) {
           isDragging = true;
           touchStartX = e.touches[0].clientX;
@@ -703,11 +897,11 @@
       container.addEventListener('touchend', () => { isDragging = false; });
 
       document.getElementById('zoom-in').addEventListener('click', () => {
-        if (zoomLevel < 3.0) { zoomLevel *= 1.25; updateTransform(); }
+        zoomLevel = Math.min(CONFIG.maxZoom, zoomLevel * 1.25); updateTransform();
       });
 
       document.getElementById('zoom-out').addEventListener('click', () => {
-        if (zoomLevel > 0.5) { zoomLevel /= 1.25; updateTransform(); }
+        zoomLevel = Math.max(CONFIG.minZoom, zoomLevel / 1.25); updateTransform();
       });
 
       document.getElementById('reset-view-btn').addEventListener('click', centerMap);
@@ -717,6 +911,10 @@
         if (e.target.tagName === 'svg') {
           closeDrawer();
         }
+      });
+
+      window.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeDrawer();
       });
 
       window.addEventListener('resize', () => {
